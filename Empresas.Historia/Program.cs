@@ -10,7 +10,7 @@ var andes = new Empresa(streamEventos);
 Console.WriteLine($"{andes.nombre}: plan {andes.plan}, {(andes.suspendida ? "suspendida" : "activa")}, reactivada {andes.reactivaciones} vez/veces");
 
 //Clases
-public class Empresa
+public class Empresa : AgregateRoot
 {
     public string nombre {get; private set;} = "";
     public string plan {get; private set;}= "";
@@ -19,30 +19,43 @@ public class Empresa
 
     public Empresa(List<object> streamEventos)
     {
-        foreach (var evento in streamEventos)
+       Load(streamEventos);
+    }
+
+    protected override void Aplicar(Object evento)
+    {
+        switch (evento)
         {
-            if (evento is EmpresaRegistrada r)
-            {
+            case EmpresaRegistrada r:
                 nombre = r.Nombre;
                 plan = r.Plan;
-            }
-            else if (evento is PlanCambiado c)
-            {
+                break;
+            case PlanCambiado c:
                 plan = c.PlanNuevo;
-            }
-            else if (evento is EmpresaSuspendida s)
-            {
+                break;
+            case EmpresaSuspendida s:
                 suspendida = true;
-            }
-            else if (evento is EmpresaReactivada er)
-            {
+                break;
+            case EmpresaReactivada er:
                 suspendida = false;
                 reactivaciones++;
-            }
+                break;
         }
     }
 }
 
+public abstract class AgregateRoot
+{
+    public void Load(IEnumerable<Object> stream)
+    {
+        foreach (var evento in stream)
+        {
+            Aplicar(evento);
+        }
+    }
+
+    protected abstract void Aplicar(Object evento);
+}
 
 //eventos
 public record EmpresaRegistrada(string Nombre, string Plan);
