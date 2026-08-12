@@ -3,9 +3,17 @@ var evento2 = new PlanCambiado("Premium");
 var evento3 = new EmpresaSuspendida("Falta de pago");
 var evento4 = new EmpresaReactivada();
 var evento5 = new EmpresaSuspendida("Incumplimiento de contrato");
+var evento6 = new EmpresaReactivada();
 
-var streamEventos = new List<object>() { evento1, evento2, evento3, evento4, evento5, evento4 };
-var andes = new Empresa(streamEventos);
+var eventosMiEmpresa = new EventStream<Empresa>();
+eventosMiEmpresa.Append(evento1);
+eventosMiEmpresa.Append(evento2);
+eventosMiEmpresa.Append(evento3);
+eventosMiEmpresa.Append(evento4);
+eventosMiEmpresa.Append(evento5);
+eventosMiEmpresa.Append(evento6);
+
+var andes = eventosMiEmpresa.Get();
 
 Console.WriteLine($"{andes.nombre}: plan {andes.plan}, {(andes.suspendida ? "suspendida" : "activa")}, reactivada {andes.reactivaciones} vez/veces");
 
@@ -16,11 +24,6 @@ public class Empresa : AgregateRoot
     public string plan {get; private set;}= "";
     public bool suspendida {get; private set;} = false;
     public int reactivaciones {get; private set;} = 0;
-
-    public Empresa(List<object> streamEventos)
-    {
-       Load(streamEventos);
-    }
 
     protected override void Aplicar(Object evento)
     {
@@ -55,6 +58,24 @@ public abstract class AgregateRoot
     }
 
     protected abstract void Aplicar(Object evento);
+}
+
+public class EventStream<T> where T : AgregateRoot, new()
+{
+    private readonly List<Object> _stream = new();
+
+    public T Get()
+    {
+        var miEmpresa = new T();
+        miEmpresa.Load(_stream);
+
+        return miEmpresa;
+    }
+
+    public void Append(Object evento)
+    {
+        _stream.Add(evento);
+    }
 }
 
 //eventos
