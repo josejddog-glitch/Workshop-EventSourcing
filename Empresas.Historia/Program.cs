@@ -1,21 +1,34 @@
-﻿var evento1 = new EmpresaRegistrada("Constructora Andes", "Basico");
-var evento2 = new PlanCambiado("Premium");
-var evento3 = new EmpresaSuspendida("Falta de pago");
-var evento4 = new EmpresaReactivada();
-var evento5 = new EmpresaSuspendida("Incumplimiento de contrato");
-var evento6 = new EmpresaReactivada();
+﻿var stream = new EventStream<Empresa>();
+var andes = stream.Get();
+stream.Append(andes.Registrar("Constructora Andes", "Basico"));
 
-var eventosMiEmpresa = new EventStream<Empresa>();
-eventosMiEmpresa.Append(evento1);
-eventosMiEmpresa.Append(evento2);
-eventosMiEmpresa.Append(evento3);
-eventosMiEmpresa.Append(evento4);
-eventosMiEmpresa.Append(evento5);
-eventosMiEmpresa.Append(evento6);
+andes = stream.Get();
+var empresaSuspendida = andes.Suspender("Falta de pago");
+if(empresaSuspendida is not null)
+{
+    stream.Append(empresaSuspendida); 
+}
 
-var andes = eventosMiEmpresa.Get();
+andes = stream.Get();
+var act = andes.Reactivar();
+stream.Append(act);
 
-Console.WriteLine($"{andes.nombre}: plan {andes.plan}, {(andes.suspendida ? "suspendida" : "activa")}, reactivada {andes.reactivaciones} vez/veces");
+andes = stream.Get();
+stream.Append(andes.CambiarPlan("Premium"));
+
+andes = stream.Get();
+var empresaSuspendida2 = andes.Suspender("Incumplimiento de contrato");
+if(empresaSuspendida2 is not null)
+{
+    stream.Append(empresaSuspendida2); 
+}
+
+andes = stream.Get();
+stream.Append(andes.Reactivar());
+
+var andes2Version = stream.Get();
+
+Console.WriteLine($"{andes2Version.nombre}: plan {andes2Version.plan}, {(andes2Version.suspendida ? "suspendida" : "activa")}, reactivada {andes2Version.reactivaciones} vez/veces");
 
 //Clases
 public class Empresa : AgregateRoot
@@ -45,6 +58,23 @@ public class Empresa : AgregateRoot
                 break;
         }
     }
+
+    public EmpresaRegistrada Registrar(string Nombre, string Plan) => new EmpresaRegistrada(Nombre, Plan);
+
+    public PlanCambiado CambiarPlan(string PlanNuevo)
+    {
+        if(suspendida)
+            throw new Exception("Empresa esta suspendida");
+
+        return new(PlanNuevo);   
+    }
+
+    public EmpresaSuspendida? Suspender(string Motivo)
+    {
+        return suspendida? null: new(Motivo);
+    }
+
+    public EmpresaReactivada Reactivar() => new();
 }
 
 public abstract class AgregateRoot
