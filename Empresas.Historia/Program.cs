@@ -1,30 +1,15 @@
 ﻿var stream = new EventStream<Empresa>();
-var andes = stream.Get();
-stream.Append(andes.Registrar("Constructora Andes", "Basico"));
+var registrarEmpresaHandler = new RegistrarEmpresaHandler(stream);
+var cambiarPlanHandler = new CambiarPlanHandler(stream);
+var suspenderHandler = new SuspenderHandler(stream);
+var reactivarHandler = new ReactivarHandler(stream);
 
-andes = stream.Get();
-var empresaSuspendida = andes.Suspender("Falta de pago");
-if(empresaSuspendida is not null)
-{
-    stream.Append(empresaSuspendida); 
-}
-
-andes = stream.Get();
-var act = andes.Reactivar();
-stream.Append(act);
-
-andes = stream.Get();
-stream.Append(andes.CambiarPlan("Premium"));
-
-andes = stream.Get();
-var empresaSuspendida2 = andes.Suspender("Incumplimiento de contrato");
-if(empresaSuspendida2 is not null)
-{
-    stream.Append(empresaSuspendida2); 
-}
-
-andes = stream.Get();
-stream.Append(andes.Reactivar());
+registrarEmpresaHandler.Handle("Constructora Andes", "Basico");
+suspenderHandler.Handle("Falta de pago");
+reactivarHandler.Handle();
+cambiarPlanHandler.Handle("Premium");
+suspenderHandler.Handle("Incumplimiento de contrato");
+reactivarHandler.Handle();
 
 var andes2Version = stream.Get();
 
@@ -105,6 +90,46 @@ public class EventStream<T> where T : AgregateRoot, new()
     public void Append(Object evento)
     {
         _stream.Add(evento);
+    }
+}
+
+public class RegistrarEmpresaHandler(EventStream<Empresa> stream)
+{
+    public void Handle(string nombre, string plan)
+    {
+        var andes = stream.Get();
+        stream.Append(andes.Registrar(nombre, plan));
+    }
+}
+
+public class CambiarPlanHandler(EventStream<Empresa> stream)
+{
+    public void Handle(string plan)
+    {
+        var andes = stream.Get();
+        stream.Append(andes.CambiarPlan(plan));
+    }
+}
+
+public class SuspenderHandler(EventStream<Empresa> stream)
+{
+    public void Handle(string motivo)
+    {
+        var andes = stream.Get();
+        var empresaSuspendida2 = andes.Suspender(motivo);
+        if(empresaSuspendida2 is not null)
+        {
+            stream.Append(empresaSuspendida2); 
+        }       
+    }
+}
+
+public class ReactivarHandler(EventStream<Empresa> stream)
+{
+    public void Handle()
+    {
+        var andes = stream.Get();
+        stream.Append(andes.Reactivar());
     }
 }
 
